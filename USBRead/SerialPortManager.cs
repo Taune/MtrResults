@@ -6,10 +6,11 @@ using System.Collections.Generic;
 using MTRSerial.ValueObjects;
 using System.Threading.Tasks;
 using System.Threading;
+using System.IO;
 
 namespace Brikkesjekk
 {
-    class SerialPortManager : IDisposable
+    public partial class SerialPortManager : IDisposable
     {
         ~SerialPortManager()
         {
@@ -66,48 +67,6 @@ namespace Brikkesjekk
                 NewSerialDataRecievedMTR(this, new SerialDataEventArgs(_InputBytes1));
         }
 
-        void _serialPort_DataReceivedECU(object sender, SerialDataReceivedEventArgs e)
-        {
-            int dataLength = _serialPortA.BytesToRead;
-            string data = _serialPortA.ReadLine();
-            char[] charsToTrim = { ' ', '\'', '\u0003' };
-            string strTrim = data.Trim(charsToTrim);
-
-            byte[] _InputBytes = Encoding.ASCII.GetBytes(data);
-
-            // Send data to whom ever interested
-            if (NewSerialDataRecievedECU != null)
-                NewSerialDataRecievedECU(this, new SerialDataEventArgs(_InputBytes));
-        }
-
-        /// Connects to a serial port for ECU. Settings defind in ComSettings
-        public void StartListeningECU()
-        {
-            // Closing serial port if it is open
-            if (_serialPortA != null && _serialPortA.IsOpen)
-                _serialPortA.Close();
-
-            try 
-            { 
-                // Setting serial port settings
-                _serialPortA = new SerialPort();
-                _serialPortA.PortName = MainMenu.ActiveUsbPort;
-                _serialPortA.BaudRate = ComSettingsECU.BaudRate;
-                _serialPortA.Parity = ComSettingsECU.Parity;
-                _serialPortA.StopBits = ComSettingsECU.StopBits;
-                _serialPortA.DataBits = ComSettingsECU.DataBits;
-                _serialPortA.Handshake = ComSettingsECU.hShake;
-                MainMenu.ECUComPortOpen = MainMenu.ActiveUsbPort;
-
-                // Subscribe to event and open serial port for data
-                _serialPortA.DataReceived += new SerialDataReceivedEventHandler(_serialPort_DataReceivedECU);
-                _serialPortA.Open();
-            }
-            catch 
-            {
-                MessageBox.Show("COM-port " + MainMenu.ActiveUsbPort + " i bruk. Velg annen COM-port!", "Feilmelding", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
 
         /// Connects to a serial port for MTR. Settings defind in ComSettings
         public void StartListeningMTR()
@@ -140,10 +99,6 @@ namespace Brikkesjekk
         }
 
         // Closes the serial port
-        public void StopListeningECU()
-        {
-            _serialPortA.Close();
-        }
 
         public void StopListeningMTR()
         {
@@ -162,17 +117,19 @@ namespace Brikkesjekk
             if (disposing)
             {
                 try
-                { _serialPortA.DataReceived -= new SerialDataReceivedEventHandler(_serialPort_DataReceivedECU); }
+                { 
+                    _serialPortB.DataReceived -= new SerialDataReceivedEventHandler(_serialPort_DataReceivedMTR); 
+                }
                 catch
                 { }
             }
             // Releasing serial port (and other unmanaged objects)
-            if (_serialPortA != null)
+            if (_serialPortB != null)
             {
-                if (_serialPortA.IsOpen)
-                    _serialPortA.Close();
+                if (_serialPortB.IsOpen)
+                    _serialPortB.Close();
 
-                _serialPortA.Dispose();
+                _serialPortB.Dispose();
             }
         }
 
@@ -200,6 +157,14 @@ namespace Brikkesjekk
             //return msgObj; 
             msgObj = MtrEcardNo.ToString();
 
+            List<MTRDataCheckPoint> checkPoints = new List<MTRDataCheckPoint>();
+            
+            for (int i = 0; i < 50; i++)
+            {
+                checkPoints.Add(new MTRDataCheckPoint { CodeN = msg[25+i*3], TimeN = msg[26+i*3], InfoField= msg[27 + i * 3] });
+                //MessageBox.Show(msg[25 + i * 3].ToString());
+            }
+            TotalTimeMTR(msgObj, checkPoints);
         }
 
 
@@ -214,8 +179,8 @@ namespace Brikkesjekk
         //TS - [ms]     2 Milliseconds NOT YET USED, WILL BE 0 IN THIS VERSION
         //Package#      4 Binary Counter, from 1 and up; Least sign byte first
         //Card - id     3 Binary, Least sign byte first
-        //Producweek 1  0 - 53; 0 when package is retrived from "history"
-        //Producyear 1  94 - 99,0 -..X; 0 when package is retrived from "history"
+        //Producweek    1  0 - 53; 0 when package is retrived from "history"
+        //Producyear    1  94 - 99,0 -..X; 0 when package is retrived from "history"
         //ECardHeadSum  1 Headchecksum from card; 0 when package is retrived from "history"
 
         //The following fields are repeated 50 times:
@@ -227,7 +192,53 @@ namespace Brikkesjekk
         //    ----------------------------------------
         //Size 234
 
+        private void TotalTimeMTR (string emitCardNo, List<MTRDataCheckPoint> CheckPoints)
+        {
+            int TotalTime = 0;
 
+            for (int i=0; i < CheckPoints.Count; i++)
+            {
+                if (CheckPoints[i].CodeN < 250)
+                {
+                    TotalTime = CheckPoints[i].TimeN + CheckPoints[i].InfoField * 256;
+                }
+                else
+                {
+                    WriteResults(TotalTime, emitCardNo);
+                    break;
+                }
+            }
+        }
+
+        private void WriteResults(int time, string emitCardNumber)
+        {
+            string MtrResultFileName = @"C:\Temp\Results.txt";
+            if (File.Exists(MtrResultFileName))
+            {
+                DateTime lastModified = System.IO.File.GetLastWriteTime(MtrResultFileName);
+                if (lastModified < DateTime.Today)
+                {
+                    File.WriteAllText(MtrResultFileName, String.Empty);
+                    using (System.IO.StreamWriter file2 = new System.IO.StreamWriter(MtrResultFileName, true))
+                    {
+                        file2.WriteLine("date,ecard,time");
+                    }
+                }
+            }
+ 
+            if (!File.Exists(MtrResultFileName))
+            {
+                using (System.IO.StreamWriter file2 = new System.IO.StreamWriter(MtrResultFileName, true))
+                {
+                    file2.WriteLine("date,ecard,time");
+                }
+            }
+
+            using (System.IO.StreamWriter file = new System.IO.StreamWriter(MtrResultFileName, true))
+            {
+                file.WriteLine(DateTime.Now.ToString("T") + "," + emitCardNumber + "," + time);
+            }
+        }
     }
 
     // EventArgs used to send bytes recieved on serial port
