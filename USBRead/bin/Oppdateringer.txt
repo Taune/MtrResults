@@ -1,0 +1,3 @@
+2022-05-02
+- Ved stopp av kommunikasjon med ECU settes kode tilbake til kode 250. Ved bruk av brikkeavlesning i Etiming så må denne være 250.
+- Endret input-felt til hvit bakgrunn slik at det følger standard Windows-grensesnitt

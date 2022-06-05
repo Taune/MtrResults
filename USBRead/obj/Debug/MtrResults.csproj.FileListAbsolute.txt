@@ -1,0 +1,13 @@
+C:\Users\taune\source\repos\MtrResults\USBRead\bin\Debug\Brikkesjekk.exe.config
+C:\Users\taune\source\repos\MtrResults\USBRead\bin\Debug\Brikkesjekk.exe
+C:\Users\taune\source\repos\MtrResults\USBRead\bin\Debug\Brikkesjekk.pdb
+C:\Users\taune\source\repos\MtrResults\USBRead\bin\Debug\Newtonsoft.Json.dll
+C:\Users\taune\source\repos\MtrResults\USBRead\bin\Debug\Newtonsoft.Json.xml
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\MtrResults.csproj.AssemblyReference.cache
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\Brikkesjekk.MainMenu.resources
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\Brikkesjekk.Properties.Resources.resources
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\MtrResults.csproj.GenerateResource.cache
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\MtrResults.csproj.CoreCompileInputs.cache
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\MtrResults.csproj.CopyComplete
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\Brikkesjekk.exe
+C:\Users\taune\source\repos\MtrResults\USBRead\obj\Debug\Brikkesjekk.pdb
